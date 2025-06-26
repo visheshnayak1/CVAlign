@@ -1,20 +1,49 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import Logo from '../components/Logo';
 import LoginForm from '../components/LoginForm';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage() {
-  const handleLogin = async (email: string, password: string, rememberMe: boolean) => {
-    // Simulate login API call
-    console.log('Login attempt:', { email, password, rememberMe });
-    
-    // Add your authentication logic here
-    // For now, we'll just simulate a successful login
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Redirect to dashboard or handle successful login
-    alert('Login successful! (This is a demo)');
+  const { signIn, signUp, resetPassword } = useAuth();
+  const navigate = useNavigate();
+
+  const handleAuth = async (
+    email: string, 
+    password: string, 
+    rememberMe: boolean, 
+    isSignUp: boolean = false,
+    fullName?: string
+  ) => {
+    try {
+      if (isSignUp) {
+        const { error } = await signUp(email, password, {
+          data: {
+            full_name: fullName,
+          }
+        });
+        
+        if (error) {
+          throw new Error(error.message);
+        }
+        
+        // Don't navigate immediately for sign up - user needs to verify email
+        return;
+      } else {
+        const { error } = await signIn(email, password);
+        
+        if (error) {
+          throw new Error(error.message);
+        }
+        
+        // Navigate to dashboard or home page after successful sign in
+        navigate('/');
+      }
+    } catch (error: any) {
+      // Re-throw the error to be handled by the form
+      throw error;
+    }
   };
 
   return (
@@ -33,23 +62,27 @@ export default function LoginPage() {
         </div>
         
         <h2 className="text-center text-3xl font-bold text-blue-900 mb-2">
-          Welcome back
+          Welcome to CVAlign
         </h2>
         <p className="text-center text-blue-600 mb-8">
-          Sign in to your CVAlign account to continue
+          Sign in to your account or create a new one to get started
         </p>
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-xl rounded-2xl sm:px-10 border border-blue-100">
-          <LoginForm onSubmit={handleLogin} />
+          <LoginForm onSubmit={handleAuth} />
         </div>
         
         <div className="mt-6 text-center">
-          <p className="text-blue-600">
-            Don't have an account?{' '}
+          <p className="text-blue-600 text-sm">
+            By signing up, you agree to our{' '}
             <a href="#" className="font-semibold text-blue-700 hover:text-blue-800 transition-colors duration-200">
-              Sign up for free
+              Terms of Service
+            </a>{' '}
+            and{' '}
+            <a href="#" className="font-semibold text-blue-700 hover:text-blue-800 transition-colors duration-200">
+              Privacy Policy
             </a>
           </p>
         </div>

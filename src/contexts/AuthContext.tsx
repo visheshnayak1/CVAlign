@@ -24,11 +24,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     const getInitialSession = async () => {
       try {
+        console.log('Getting initial session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
         } else {
+          console.log('Initial session:', session);
           setSession(session);
           setUser(session?.user ?? null);
         }
@@ -64,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
           }
         } else if (event === 'SIGNED_OUT') {
-          console.log('User signed out');
+          console.log('User signed out - clearing state');
           // Clear local state immediately
           setSession(null);
           setUser(null);
@@ -81,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('Attempting to sign in...');
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -123,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, options?: { data?: any }) => {
     try {
+      console.log('Attempting to sign up...');
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -178,10 +182,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      console.log('Attempting to sign out...');
       const currentUser = user;
+      
+      // Clear state immediately to provide instant feedback
+      setSession(null);
+      setUser(null);
       
       // Log sign-out activity before signing out
       if (currentUser) {
+        console.log('Logging sign-out activity...');
         await logSigninActivity({
           userId: currentUser.id,
           email: currentUser.email || '',
@@ -190,18 +200,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
+      console.log('Calling supabase.auth.signOut()...');
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error('Sign out error:', error);
+        // Restore state if sign out failed
+        setSession(session);
+        setUser(currentUser);
         return { error };
       }
 
       console.log('Sign out successful');
-      
-      // Clear state immediately (also handled by auth state change listener)
-      setSession(null);
-      setUser(null);
       
       return { error: null };
     } catch (error) {
@@ -212,6 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
+      console.log('Attempting password reset...');
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });

@@ -7,24 +7,34 @@ import { useAuth } from '../contexts/AuthContext';
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const handleSignOut = async () => {
+    if (isSigningOut) return; // Prevent multiple clicks
+    
     try {
+      console.log('Sign out button clicked');
+      setIsSigningOut(true);
       setIsUserMenuOpen(false);
+      
       const { error } = await signOut();
+      
       if (error) {
         console.error('Error signing out:', error);
-        alert('Error signing out. Please try again.');
+        alert(`Error signing out: ${error.message}`);
       } else {
+        console.log('Sign out successful, navigating to home');
         // Navigate to home page after successful sign out
         navigate('/');
       }
     } catch (error) {
       console.error('Unexpected error signing out:', error);
       alert('Unexpected error signing out. Please try again.');
+    } finally {
+      setIsSigningOut(false);
     }
   };
 
@@ -88,6 +98,7 @@ export default function Header() {
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center space-x-3 bg-blue-50 hover:bg-blue-100 rounded-lg px-3 py-2 transition-colors duration-200"
+                  disabled={isSigningOut}
                 >
                   <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
                     {getUserInitials()}
@@ -130,10 +141,11 @@ export default function Header() {
                     
                     <button
                       onClick={handleSignOut}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center"
+                      disabled={isSigningOut}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <LogOut className="h-4 w-4 mr-3" />
-                      Sign Out
+                      {isSigningOut ? 'Signing Out...' : 'Sign Out'}
                     </button>
                   </div>
                 )}
@@ -202,9 +214,10 @@ export default function Header() {
                     </Link>
                     <button
                       onClick={handleSignOut}
-                      className="w-full bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium"
+                      disabled={isSigningOut}
+                      className="w-full bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Sign Out
+                      {isSigningOut ? 'Signing Out...' : 'Sign Out'}
                     </button>
                   </div>
                 ) : (

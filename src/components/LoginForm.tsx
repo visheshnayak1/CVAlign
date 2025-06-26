@@ -130,6 +130,9 @@ export default function LoginForm({ onSubmit }: LoginFormProps) {
     resetForm();
   };
 
+  // Check if the error is about existing user and we're in signup mode
+  const isExistingUserError = errors.general.includes('This email is already registered') && mode === 'signup';
+
   return (
     <div className="space-y-6">
       {/* Mode Tabs */}
@@ -170,9 +173,23 @@ export default function LoginForm({ onSubmit }: LoginFormProps) {
 
       {/* General Error */}
       {errors.general && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
-          <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
-          <p className="text-red-700 text-sm">{errors.general}</p>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
+            <p className="text-red-700 text-sm">{errors.general}</p>
+          </div>
+          {/* Show "Switch to Sign In" button for existing user error */}
+          {isExistingUserError && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => switchMode('signin')}
+                className="text-sm bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors duration-200"
+              >
+                Switch to Sign In
+              </button>
+            </div>
+          )}
         </div>
       )}
 

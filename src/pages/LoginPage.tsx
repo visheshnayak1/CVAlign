@@ -26,6 +26,10 @@ export default function LoginPage() {
         });
         
         if (error) {
+          // Check for specific error messages and provide user-friendly alternatives
+          if (error.message.includes('User already registered') || error.message.includes('user_already_exists')) {
+            throw new Error('This email is already registered. Please sign in instead.');
+          }
           throw new Error(error.message);
         }
         

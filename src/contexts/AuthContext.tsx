@@ -21,6 +21,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     // Get initial session
     const getInitialSession = async () => {
       try {
@@ -31,13 +33,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Error getting session:', error);
         } else {
           console.log('Initial session:', session);
-          setSession(session);
-          setUser(session?.user ?? null);
+          if (mounted) {
+            setSession(session);
+            setUser(session?.user ?? null);
+          }
         }
       } catch (error) {
         console.error('Unexpected error getting session:', error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -48,28 +54,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         console.log('Auth state changed:', event, session);
         
+        if (!mounted) return;
+
+        // Update state immediately
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
 
         // Handle specific auth events
-        if (event === 'SIGNED_IN') {
-          console.log('User signed in:', session?.user);
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('User signed in:', session.user);
           
           // Log successful sign-in
-          if (session?.user) {
+          try {
             await logSigninActivity({
               userId: session.user.id,
               email: session.user.email || '',
               signinMethod: 'email',
               success: true,
             });
+          } catch (error) {
+            console.error('Error logging sign-in activity:', error);
           }
         } else if (event === 'SIGNED_OUT') {
-          console.log('User signed out - clearing state');
-          // Clear local state immediately
-          setSession(null);
-          setUser(null);
+          console.log('User signed out - state cleared');
         } else if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed');
         }
@@ -77,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -93,32 +102,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Sign in error:', error);
         
         // Log failed sign-in attempt
-        await logSigninActivity({
-          email: email.trim().toLowerCase(),
-          signinMethod: 'email',
-          success: false,
-          errorMessage: error.message,
-        });
+        try {
+          await logSigninActivity({
+            email: email.trim().toLowerCase(),
+            signinMethod: 'email',
+            success: false,
+            errorMessage: error.message,
+          });
+        } catch (logError) {
+          console.error('Error logging failed sign-in:', logError);
+        }
         
         return { error };
       }
 
       console.log('Sign in successful:', data);
-      
-      // Note: Successful sign-in will be logged by the auth state change listener
-      // to ensure we have the user ID available
-      
       return { error: null };
     } catch (error) {
       console.error('Unexpected sign in error:', error);
       
       // Log unexpected error
-      await logSigninActivity({
-        email: email.trim().toLowerCase(),
-        signinMethod: 'email',
-        success: false,
-        errorMessage: 'Unexpected error occurred',
-      });
+      try {
+        await logSigninActivity({
+          email: email.trim().toLowerCase(),
+          signinMethod: 'email',
+          success: false,
+          errorMessage: 'Unexpected error occurred',
+        });
+      } catch (logError) {
+        console.error('Error logging unexpected sign-in error:', logError);
+      }
       
       return { error: error as AuthError };
     }
@@ -132,7 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
         options: {
           data: options?.data || {},
-          emailRedirectTo: undefined, // Disable email confirmation redirect
+          emailRedirectTo: undefined,
         },
       });
 
@@ -140,12 +153,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Sign up error:', error);
         
         // Log failed sign-up attempt
-        await logSigninActivity({
-          email: email.trim().toLowerCase(),
-          signinMethod: 'email_signup',
-          success: false,
-          errorMessage: error.message,
-        });
+        try {
+          await logSigninActivity({
+            email: email.trim().toLowerCase(),
+            signinMethod: 'email_signup',
+            success: false,
+            errorMessage: error.message,
+          });
+        } catch (logError) {
+          console.error('Error logging failed sign-up:', logError);
+        }
         
         return { error };
       }
@@ -153,16 +170,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Sign up successful:', data);
       
       // Log successful sign-up
-      await logSigninActivity({
-        userId: data.user?.id,
-        email: email.trim().toLowerCase(),
-        signinMethod: 'email_signup',
-        success: true,
-      });
-      
-      // For development, we'll auto-confirm the user if email confirmation is disabled
-      if (data.user && !data.session) {
-        console.log('User created but not confirmed. In production, user would need to verify email.');
+      try {
+        await logSigninActivity({
+          userId: data.user?.id,
+          email: email.trim().toLowerCase(),
+          signinMethod: 'email_signup',
+          success: true,
+        });
+      } catch (logError) {
+        console.error('Error logging successful sign-up:', logError);
       }
 
       return { error: null };
@@ -170,12 +186,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Unexpected sign up error:', error);
       
       // Log unexpected error
-      await logSigninActivity({
-        email: email.trim().toLowerCase(),
-        signinMethod: 'email_signup',
-        success: false,
-        errorMessage: 'Unexpected error occurred',
-      });
+      try {
+        await logSigninActivity({
+          email: email.trim().toLowerCase(),
+          signinMethod: 'email_signup',
+          success: false,
+          errorMessage: 'Unexpected error occurred',
+        });
+      } catch (logError) {
+        console.error('Error logging unexpected sign-up error:', logError);
+      }
       
       return { error: error as AuthError };
     }
@@ -183,37 +203,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      console.log('Attempting to sign out...');
+      console.log('Starting sign out process...');
       const currentUser = user;
       
-      // Log sign-out activity before signing out
+      // Clear state immediately to provide instant feedback
+      setSession(null);
+      setUser(null);
+
+      // Log sign-out activity (do this after clearing state to avoid issues)
       if (currentUser) {
         console.log('Logging sign-out activity...');
-        await logSigninActivity({
-          userId: currentUser.id,
-          email: currentUser.email || '',
-          signinMethod: 'signout',
-          success: true,
-        });
+        try {
+          await logSigninActivity({
+            userId: currentUser.id,
+            email: currentUser.email || '',
+            signinMethod: 'signout',
+            success: true,
+          });
+        } catch (logError) {
+          console.error('Error logging sign-out activity:', logError);
+          // Don't fail the sign-out process if logging fails
+        }
       }
 
       console.log('Calling supabase.auth.signOut()...');
-      const { error } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut({
+        scope: 'global' // Sign out from all sessions
+      });
       
       if (error) {
-        console.error('Sign out error:', error);
+        console.error('Supabase sign out error:', error);
+        // Even if there's an error, we've already cleared the local state
+        // This ensures the UI reflects the signed-out state
         return { error };
       }
 
-      console.log('Sign out successful');
-      
-      // Clear state immediately
-      setSession(null);
-      setUser(null);
-      
+      console.log('Sign out completed successfully');
       return { error: null };
     } catch (error) {
       console.error('Unexpected sign out error:', error);
+      
+      // Even on error, ensure local state is cleared
+      setSession(null);
+      setUser(null);
+      
       return { error: error as AuthError };
     }
   };
@@ -232,12 +265,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Password reset error:', error);
         
         // Log failed password reset attempt
-        await logSigninActivity({
-          email: email.trim().toLowerCase(),
-          signinMethod: 'password_reset',
-          success: false,
-          errorMessage: error.message,
-        });
+        try {
+          await logSigninActivity({
+            email: email.trim().toLowerCase(),
+            signinMethod: 'password_reset',
+            success: false,
+            errorMessage: error.message,
+          });
+        } catch (logError) {
+          console.error('Error logging failed password reset:', logError);
+        }
         
         return { error };
       }
@@ -245,23 +282,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Password reset email sent');
       
       // Log successful password reset request
-      await logSigninActivity({
-        email: email.trim().toLowerCase(),
-        signinMethod: 'password_reset',
-        success: true,
-      });
+      try {
+        await logSigninActivity({
+          email: email.trim().toLowerCase(),
+          signinMethod: 'password_reset',
+          success: true,
+        });
+      } catch (logError) {
+        console.error('Error logging successful password reset:', logError);
+      }
       
       return { error: null };
     } catch (error) {
       console.error('Unexpected password reset error:', error);
       
       // Log unexpected error
-      await logSigninActivity({
-        email: email.trim().toLowerCase(),
-        signinMethod: 'password_reset',
-        success: false,
-        errorMessage: 'Unexpected error occurred',
-      });
+      try {
+        await logSigninActivity({
+          email: email.trim().toLowerCase(),
+          signinMethod: 'password_reset',
+          success: false,
+          errorMessage: 'Unexpected error occurred',
+        });
+      } catch (logError) {
+        console.error('Error logging unexpected password reset error:', logError);
+      }
       
       return { error: error as AuthError };
     }

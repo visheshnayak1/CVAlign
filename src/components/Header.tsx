@@ -19,20 +19,22 @@ export default function Header() {
       console.log('Sign out button clicked');
       setIsSigningOut(true);
       setIsUserMenuOpen(false);
+      setIsMenuOpen(false); // Close mobile menu too
       
       const { error } = await signOut();
       
       if (error) {
         console.error('Error signing out:', error);
-        alert(`Error signing out: ${error.message}`);
+        // Show user-friendly error message
+        alert(`Unable to sign out: ${error.message}. Please try again.`);
       } else {
         console.log('Sign out successful, navigating to home');
-        // Navigate to home page after successful sign out
-        navigate('/');
+        // Force navigation to home page
+        window.location.href = '/';
       }
     } catch (error) {
       console.error('Unexpected error signing out:', error);
-      alert('Unexpected error signing out. Please try again.');
+      alert('An unexpected error occurred while signing out. Please refresh the page and try again.');
     } finally {
       setIsSigningOut(false);
     }
@@ -66,6 +68,14 @@ export default function Header() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isUserMenuOpen]);
+
+  // Close menus when user changes (sign out)
+  useEffect(() => {
+    if (!user) {
+      setIsUserMenuOpen(false);
+      setIsMenuOpen(false);
+    }
+  }, [user]);
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">

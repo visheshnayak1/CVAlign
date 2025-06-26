@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { logSigninActivity } from '../lib/signinLogger';
 
 interface AuthContextType {
   user: User | null;
@@ -48,6 +49,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Handle specific auth events
         if (event === 'SIGNED_IN') {
           console.log('User signed in:', session?.user);
+          
+          // Log successful sign-in
+          if (session?.user) {
+            await logSigninActivity({
+              userId: session.user.id,
+              email: session.user.email || '',
+              signinMethod: 'email',
+              success: true,
+            });
+          }
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out');
         } else if (event === 'TOKEN_REFRESHED') {
@@ -70,13 +81,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Sign in error:', error);
+        
+        // Log failed sign-in attempt
+        await logSigninActivity({
+          email,
+          signinMethod: 'email',
+          success: false,
+          errorMessage: error.message,
+        });
+        
         return { error };
       }
 
       console.log('Sign in successful:', data);
+      
+      // Note: Successful sign-in will be logged by the auth state change listener
+      // to ensure we have the user ID available
+      
       return { error: null };
     } catch (error) {
       console.error('Unexpected sign in error:', error);
+      
+      // Log unexpected error
+      await logSigninActivity({
+        email,
+        signinMethod: 'email',
+        success: false,
+        errorMessage: 'Unexpected error occurred',
+      });
+      
       return { error: error as AuthError };
     }
   };
@@ -93,10 +126,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Sign up error:', error);
+        
+        // Log failed sign-up attempt
+        await logSigninActivity({
+          email,
+          signinMethod: 'email_signup',
+          success: false,
+          errorMessage: error.message,
+        });
+        
         return { error };
       }
 
       console.log('Sign up successful:', data);
+      
+      // Log successful sign-up
+      await logSigninActivity({
+        userId: data.user?.id,
+        email,
+        signinMethod: 'email_signup',
+        success: true,
+      });
       
       // Check if email confirmation is required
       if (data.user && !data.session) {
@@ -106,12 +156,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: null };
     } catch (error) {
       console.error('Unexpected sign up error:', error);
+      
+      // Log unexpected error
+      await logSigninActivity({
+        email,
+        signinMethod: 'email_signup',
+        success: false,
+        errorMessage: 'Unexpected error occurred',
+      });
+      
       return { error: error as AuthError };
     }
   };
 
   const signOut = async () => {
     try {
+      const currentUser = user;
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -120,6 +180,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('Sign out successful');
+      
+      // Log sign-out activity
+      if (currentUser) {
+        await logSigninActivity({
+          userId: currentUser.id,
+          email: currentUser.email || '',
+          signinMethod: 'signout',
+          success: true,
+        });
+      }
+      
       return { error: null };
     } catch (error) {
       console.error('Unexpected sign out error:', error);
@@ -135,13 +206,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Password reset error:', error);
+        
+        // Log failed password reset attempt
+        await logSigninActivity({
+          email,
+          signinMethod: 'password_reset',
+          success: false,
+          errorMessage: error.message,
+        });
+        
         return { error };
       }
 
       console.log('Password reset email sent');
+      
+      // Log successful password reset request
+      await logSigninActivity({
+        email,
+        signinMethod: 'password_reset',
+        success: true,
+      });
+      
       return { error: null };
     } catch (error) {
       console.error('Unexpected password reset error:', error);
+      
+      // Log unexpected error
+      await logSigninActivity({
+        email,
+        signinMethod: 'password_reset',
+        success: false,
+        errorMessage: 'Unexpected error occurred',
+      });
+      
       return { error: error as AuthError };
     }
   };

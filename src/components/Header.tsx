@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Logo from './Logo';
-import { Menu, X, User, LogOut, Settings } from 'lucide-react';
+import { Menu, X, User, LogOut, Settings, Activity } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Header() {
@@ -76,15 +76,28 @@ export default function Header() {
                       <p className="text-xs text-blue-600">{user.email}</p>
                     </div>
                     
-                    <button className="w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 transition-colors duration-200 flex items-center">
+                    <Link
+                      to="/profile"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 transition-colors duration-200 flex items-center"
+                    >
                       <User className="h-4 w-4 mr-3" />
                       Profile
-                    </button>
+                    </Link>
                     
                     <button className="w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 transition-colors duration-200 flex items-center">
                       <Settings className="h-4 w-4 mr-3" />
                       Settings
                     </button>
+                    
+                    <Link
+                      to="/profile"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 transition-colors duration-200 flex items-center"
+                    >
+                      <Activity className="h-4 w-4 mr-3" />
+                      Activity Logs
+                    </Link>
                     
                     <hr className="my-2 border-blue-100" />
                     
@@ -153,6 +166,13 @@ export default function Header() {
                         <p className="text-xs text-blue-600">{user.email}</p>
                       </div>
                     </div>
+                    <Link
+                      to="/profile"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="w-full bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium text-center block"
+                    >
+                      View Profile
+                    </Link>
                     <button
                       onClick={handleSignOut}
                       className="w-full bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium"

@@ -6,7 +6,7 @@ import LoginForm from '../components/LoginForm';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage() {
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
   const handleAuth = async (
@@ -18,9 +18,10 @@ export default function LoginPage() {
   ) => {
     try {
       if (isSignUp) {
+        console.log('Handling sign up for:', email);
         const { error } = await signUp(email, password, {
           data: {
-            full_name: fullName,
+            full_name: fullName || '',
           }
         });
         
@@ -28,19 +29,24 @@ export default function LoginPage() {
           throw new Error(error.message);
         }
         
-        // Don't navigate immediately for sign up - user needs to verify email
+        // For sign up, show success message but don't navigate immediately
+        // The user might need to verify their email depending on Supabase settings
+        console.log('Sign up successful');
         return;
       } else {
+        console.log('Handling sign in for:', email);
         const { error } = await signIn(email, password);
         
         if (error) {
           throw new Error(error.message);
         }
         
-        // Navigate to dashboard or home page after successful sign in
+        console.log('Sign in successful, navigating to home');
+        // Navigate to home page after successful sign in
         navigate('/');
       }
     } catch (error: any) {
+      console.error('Auth error:', error);
       // Re-throw the error to be handled by the form
       throw error;
     }

@@ -83,9 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Attempting to sign in...');
+      console.log('Attempting to sign in with:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password,
       });
 
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Log failed sign-in attempt
         await logSigninActivity({
-          email,
+          email: email.trim().toLowerCase(),
           signinMethod: 'email',
           success: false,
           errorMessage: error.message,
@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Log unexpected error
       await logSigninActivity({
-        email,
+        email: email.trim().toLowerCase(),
         signinMethod: 'email',
         success: false,
         errorMessage: 'Unexpected error occurred',
@@ -126,12 +126,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, options?: { data?: any }) => {
     try {
-      console.log('Attempting to sign up...');
+      console.log('Attempting to sign up with:', email);
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim().toLowerCase(),
         password,
         options: {
           data: options?.data || {},
+          emailRedirectTo: undefined, // Disable email confirmation redirect
         },
       });
 
@@ -140,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Log failed sign-up attempt
         await logSigninActivity({
-          email,
+          email: email.trim().toLowerCase(),
           signinMethod: 'email_signup',
           success: false,
           errorMessage: error.message,
@@ -154,14 +155,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Log successful sign-up
       await logSigninActivity({
         userId: data.user?.id,
-        email,
+        email: email.trim().toLowerCase(),
         signinMethod: 'email_signup',
         success: true,
       });
       
-      // Check if email confirmation is required
+      // For development, we'll auto-confirm the user if email confirmation is disabled
       if (data.user && !data.session) {
-        console.log('Email confirmation required');
+        console.log('User created but not confirmed. In production, user would need to verify email.');
       }
 
       return { error: null };
@@ -170,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Log unexpected error
       await logSigninActivity({
-        email,
+        email: email.trim().toLowerCase(),
         signinMethod: 'email_signup',
         success: false,
         errorMessage: 'Unexpected error occurred',
@@ -184,10 +185,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Attempting to sign out...');
       const currentUser = user;
-      
-      // Clear state immediately to provide instant feedback
-      setSession(null);
-      setUser(null);
       
       // Log sign-out activity before signing out
       if (currentUser) {
@@ -205,13 +202,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (error) {
         console.error('Sign out error:', error);
-        // Restore state if sign out failed
-        setSession(session);
-        setUser(currentUser);
         return { error };
       }
 
       console.log('Sign out successful');
+      
+      // Clear state immediately
+      setSession(null);
+      setUser(null);
       
       return { error: null };
     } catch (error) {
@@ -222,17 +220,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
-      console.log('Attempting password reset...');
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
+      console.log('Attempting password reset for:', email);
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        {
+          redirectTo: `${window.location.origin}/reset-password`,
+        }
+      );
 
       if (error) {
         console.error('Password reset error:', error);
         
         // Log failed password reset attempt
         await logSigninActivity({
-          email,
+          email: email.trim().toLowerCase(),
           signinMethod: 'password_reset',
           success: false,
           errorMessage: error.message,
@@ -245,7 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Log successful password reset request
       await logSigninActivity({
-        email,
+        email: email.trim().toLowerCase(),
         signinMethod: 'password_reset',
         success: true,
       });
@@ -256,7 +257,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Log unexpected error
       await logSigninActivity({
-        email,
+        email: email.trim().toLowerCase(),
         signinMethod: 'password_reset',
         success: false,
         errorMessage: 'Unexpected error occurred',

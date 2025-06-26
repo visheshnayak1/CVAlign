@@ -61,11 +61,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         setLoading(false);
 
-        // Handle specific auth events
+        // Handle specific auth events - log successful sign-ins here when session is established
         if (event === 'SIGNED_IN' && session?.user) {
           console.log('User signed in:', session.user);
           
-          // Log successful sign-in
+          // Log successful sign-in - now that session is established
           try {
             await logSigninActivity({
               userId: session.user.id,
@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.error('Sign in error:', error);
         
-        // Log failed sign-in attempt
+        // Log failed sign-in attempt (user_id will be null for failed attempts)
         try {
           await logSigninActivity({
             email: email.trim().toLowerCase(),
@@ -117,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('Sign in successful:', data);
+      // Note: Successful sign-in logging is now handled in onAuthStateChange
       return { error: null };
     } catch (error) {
       console.error('Unexpected sign in error:', error);
@@ -152,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.error('Sign up error:', error);
         
-        // Log failed sign-up attempt
+        // Log failed sign-up attempt (user_id will be null for failed attempts)
         try {
           await logSigninActivity({
             email: email.trim().toLowerCase(),
@@ -169,18 +170,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('Sign up successful:', data);
       
-      // Log successful sign-up
-      try {
-        await logSigninActivity({
-          userId: data.user?.id,
-          email: email.trim().toLowerCase(),
-          signinMethod: 'email_signup',
-          success: true,
-        });
-      } catch (logError) {
-        console.error('Error logging successful sign-up:', logError);
-      }
-
+      // Note: Successful sign-up logging is now handled in onAuthStateChange
+      // when the SIGNED_IN event fires with the established session
+      
       return { error: null };
     } catch (error) {
       console.error('Unexpected sign up error:', error);

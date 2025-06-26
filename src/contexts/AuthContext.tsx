@@ -23,16 +23,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Error getting session:', error);
-      } else {
-        setSession(session);
-        setUser(session?.user ?? null);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+      } catch (error) {
+        console.error('Unexpected error getting session:', error);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
     getInitialSession();
@@ -61,6 +65,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out');
+          // Clear local state immediately
+          setSession(null);
+          setUser(null);
         } else if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed');
         }
@@ -172,6 +179,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       const currentUser = user;
+      
+      // Log sign-out activity before signing out
+      if (currentUser) {
+        await logSigninActivity({
+          userId: currentUser.id,
+          email: currentUser.email || '',
+          signinMethod: 'signout',
+          success: true,
+        });
+      }
+
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -181,15 +199,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('Sign out successful');
       
-      // Log sign-out activity
-      if (currentUser) {
-        await logSigninActivity({
-          userId: currentUser.id,
-          email: currentUser.email || '',
-          signinMethod: 'signout',
-          success: true,
-        });
-      }
+      // Clear state immediately (also handled by auth state change listener)
+      setSession(null);
+      setUser(null);
       
       return { error: null };
     } catch (error) {

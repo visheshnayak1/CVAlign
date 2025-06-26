@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Logo from './Logo';
 import { Menu, X, User, LogOut, Settings, Activity } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,13 +8,23 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { user, signOut, loading } = useAuth();
+  const navigate = useNavigate();
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const handleSignOut = async () => {
     try {
-      await signOut();
       setIsUserMenuOpen(false);
+      const { error } = await signOut();
+      if (error) {
+        console.error('Error signing out:', error);
+        alert('Error signing out. Please try again.');
+      } else {
+        // Navigate to home page after successful sign out
+        navigate('/');
+      }
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('Unexpected error signing out:', error);
+      alert('Unexpected error signing out. Please try again.');
     }
   };
 
@@ -29,6 +39,23 @@ export default function Header() {
     const name = getUserDisplayName();
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    if (isUserMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isUserMenuOpen]);
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -57,7 +84,7 @@ export default function Header() {
             {loading ? (
               <div className="w-8 h-8 bg-blue-100 rounded-full animate-pulse"></div>
             ) : user ? (
-              <div className="relative">
+              <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center space-x-3 bg-blue-50 hover:bg-blue-100 rounded-lg px-3 py-2 transition-colors duration-200"
@@ -196,14 +223,6 @@ export default function Header() {
               </div>
             </nav>
           </div>
-        )}
-
-        {/* Click outside to close user menu */}
-        {isUserMenuOpen && (
-          <div 
-            className="fixed inset-0 z-40" 
-            onClick={() => setIsUserMenuOpen(false)}
-          ></div>
         )}
       </div>
     </header>

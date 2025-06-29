@@ -40,6 +40,10 @@ export default function Header() {
     }
   };
 
+  const handleTryDemo = () => {
+    navigate('/demo');
+  };
+
   const getUserDisplayName = () => {
     if (user?.user_metadata?.full_name) {
       return user.user_metadata.full_name;
@@ -168,7 +172,10 @@ export default function Header() {
                 >
                   Sign In
                 </Link>
-                <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-all duration-200 transform hover:scale-105 font-medium">
+                <button 
+                  onClick={handleTryDemo}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-all duration-200 transform hover:scale-105 font-medium"
+                >
                   Try Demo
                 </button>
               </>
@@ -238,7 +245,10 @@ export default function Header() {
                     >
                       Sign In
                     </Link>
-                    <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium">
+                    <button 
+                      onClick={handleTryDemo}
+                      className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
+                    >
                       Try Demo
                     </button>
                   </>

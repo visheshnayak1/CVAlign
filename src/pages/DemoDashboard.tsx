@@ -5,9 +5,7 @@ import {
   Clock, Target, Star, TrendingUp, Award, MessageSquare, Calendar,
   CheckCircle, AlertCircle, XCircle
 } from 'lucide-react';
-import { RankingEngine, CandidateRanking } from '../lib/rankingEngine';
-import { CVProcessor } from '../lib/cvProcessor';
-import { InterviewScheduler } from '../lib/interviewScheduler';
+import { DemoProcessor, DemoCandidateRanking } from '../lib/demoProcessor';
 
 export default function DemoDashboard() {
   const [jobDescription, setJobDescription] = useState('');
@@ -15,8 +13,8 @@ export default function DemoDashboard() {
   const [vacancies, setVacancies] = useState(1);
   const [uploadedCVs, setUploadedCVs] = useState<File[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [results, setResults] = useState<CandidateRanking[]>([]);
-  const [selectedCandidate, setSelectedCandidate] = useState<CandidateRanking | null>(null);
+  const [results, setResults] = useState<DemoCandidateRanking[]>([]);
+  const [selectedCandidate, setSelectedCandidate] = useState<DemoCandidateRanking | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'rankings' | 'feedback' | 'interviews'>('overview');
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,16 +35,20 @@ export default function DemoDashboard() {
     setIsAnalyzing(true);
     
     try {
-      // Create job
-      const jobId = await CVProcessor.createJob({
-        title: jobTitle,
-        description: jobDescription,
-        requirements: jobDescription, // Using description as requirements for demo
-        vacancies
-      });
-
-      // Process CVs and generate rankings
-      const rankings = await RankingEngine.processAndRankCandidates(jobId, uploadedCVs);
+      // Simulate processing delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Process CVs using demo processor
+      const rankings = await DemoProcessor.processAndRankCandidates(
+        {
+          title: jobTitle,
+          description: jobDescription,
+          requirements: jobDescription,
+          vacancies
+        },
+        uploadedCVs
+      );
+      
       setResults(rankings);
       setActiveTab('rankings');
     } catch (error) {
@@ -60,22 +62,12 @@ export default function DemoDashboard() {
   const handleScheduleInterviews = async () => {
     if (results.length === 0) return;
 
-    const topCandidates = results
-      .filter(r => r.isRecommended)
-      .map(r => r.candidateId);
-
-    try {
-      await InterviewScheduler.scheduleInterviews({
-        jobId: results[0]?.candidateId || '', // This would be the actual job ID
-        candidateIds: topCandidates,
-        interviewType: 'standard'
-      });
-
-      alert(`Interview invitations sent to ${topCandidates.length} top candidates!`);
-    } catch (error) {
-      console.error('Failed to schedule interviews:', error);
-      alert('Failed to schedule interviews. Please try again.');
-    }
+    const topCandidates = results.filter(r => r.isRecommended);
+    
+    // Simulate scheduling
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    alert(`Interview invitations sent to ${topCandidates.length} top candidates!`);
   };
 
   const handleDownloadReport = () => {
